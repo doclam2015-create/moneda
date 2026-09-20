@@ -174,10 +174,10 @@ const COINS = [
   { id: 'cl10', name: '10 pesos', country: 'Chile', flag: '🇨🇱', outer: GOLD, inner: null, thick: 0.14, size: 0.82, ttext: 'sello', reeded: true,
     heads(c) { H.bust(c, CX + 8, CX + 30, 215, 'ohiggins'); H.arcText(c, 'REPUBLICA DE CHILE', RR * 0.83, Math.PI * 1.12, Math.PI * 1.88, 40); H.arcTextBottom(c, 'LIBERTADOR B. O\'HIGGINS', RR * 0.83, Math.PI * 0.14, Math.PI * 0.86, 26); },
     tails(c) { H.text(c, '10', CX, CX - 30, 200, 800, SANS); H.text(c, 'PESOS', CX, CX + 95, 44, 700, SANS); H.star(c, CX, CX - 190, 26); H.text(c, '2022', CX, CX + 175, 28, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
-  { id: 'usq', name: 'Quarter dollar', country: 'Estados Unidos', flag: '🇺🇸', outer: NICKEL, inner: null, thick: 0.14, size: 0.95, ttext: 'cruz', reeded: true,
+  { id: 'usq', name: 'Quarter dollar', country: 'Estados Unidos', flag: '🇺🇸', outer: NICKEL, inner: null, thick: 0.14, size: 0.95, ttext: 'cruz', reeded: true, photo: { heads: 'img/usq_h.jpg', tails: 'img/usq_t.jpg' }, credit: 'Anverso: United States Mint (dominio público). Reverso: Wikimedia Commons, CC BY-SA 3.0.',
     heads(c) { H.bust(c, CX + 10, CX + 40, 215, 'liberty'); H.arcText(c, 'LIBERTY', RR * 0.83, Math.PI * 1.3, Math.PI * 1.7, 46); H.text(c, 'IN GOD', CX - 170, CX - 40, 22, 700, SANS); H.text(c, 'WE TRUST', CX - 170, CX - 14, 22, 700, SANS); H.arcTextBottom(c, '1998', RR * 0.83, Math.PI * 0.4, Math.PI * 0.6, 34); },
     tails(c) { H.eagle(c, CX, CX - 10, 190); H.arcText(c, 'UNITED STATES OF AMERICA', RR * 0.84, Math.PI * 1.1, Math.PI * 1.9, 30); H.arcTextBottom(c, 'QUARTER DOLLAR', RR * 0.84, Math.PI * 0.22, Math.PI * 0.78, 32); H.text(c, 'E PLURIBUS UNUM', CX, CX - 150, 16, 700, SANS); } },
-  { id: 'eur1', name: '1 euro', country: 'Unión Europea', flag: '🇪🇺', outer: NICKEL, inner: GOLD, innerR: 0.7, thick: 0.15, size: 0.92, ttext: 'cruz', reeded: false,
+  { id: 'eur1', name: '1 euro', country: 'Unión Europea', flag: '🇪🇺', outer: NICKEL, inner: GOLD, innerR: 0.7, thick: 0.15, size: 0.92, ttext: 'cruz', reeded: false, photo: { heads: 'img/eur1_h.jpg' }, credit: 'Cara común: foto de Wikimedia Commons, CC BY 2.0. Cara nacional: ilustración.',
     heads(c) { H.europe(c, CX + 60, CX + 10, 150); H.text(c, '1', CX - 150, CX - 20, 200, 800, SANS); H.text(c, 'EURO', CX - 120, CX + 110, 40, 700, SANS); for (let i = 0; i < 6; i++) { c.fillRect(CX - 250, CX - 60 + i * 26, 70, 5); } for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; H.star(c, CX + Math.cos(a) * RR * 0.86, CX + Math.sin(a) * RR * 0.86, 14); } },
     tails(c) { for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; H.star(c, CX + Math.cos(a) * RR * 0.86, CX + Math.sin(a) * RR * 0.86, 15); } H.bust(c, CX + 8, CX + 40, 200, 'queen'); H.text(c, '2002', CX - 160, CX + 130, 30, 700, SANS); } },
   { id: 'gbp1', name: '1 pound', country: 'Reino Unido', flag: '🇬🇧', outer: GOLD, inner: NICKEL, innerR: 0.66, thick: 0.17, size: 0.9, sides: 12, ttext: 'cruz', reeded: false,
@@ -189,24 +189,43 @@ const COINS = [
   { id: 'ar1', name: '1 peso', country: 'Argentina', flag: '🇦🇷', outer: NICKEL, inner: GOLD, innerR: 0.66, thick: 0.16, size: 0.9, ttext: 'cruz', reeded: false,
     heads(c) { H.sunFace(c, CX, CX, 150, 32); H.arcText(c, 'REPUBLICA ARGENTINA', RR * 0.84, Math.PI * 1.1, Math.PI * 1.9, 32); H.arcTextBottom(c, 'EN UNION Y LIBERTAD', RR * 0.84, Math.PI * 0.14, Math.PI * 0.86, 28); },
     tails(c) { H.text(c, '1', CX, CX - 30, 230, 800, SANS); H.text(c, 'PESO', CX, CX + 110, 52, 700, SANS); H.text(c, '1995', CX, CX + 185, 28, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
-  { id: 'jp100', name: '100 yen', country: 'Japón', flag: '🇯🇵', outer: NICKEL, inner: null, thick: 0.13, size: 0.88, ttext: 'cruz', reeded: true,
+  { id: 'jp100', name: '100 yen', country: 'Japón', flag: '🇯🇵', outer: NICKEL, inner: null, thick: 0.13, size: 0.88, ttext: 'cruz', reeded: true, photo: { heads: 'img/jp100_h.jpg', tails: 'img/jp100_t.jpg' }, credit: 'Fotos: Wikimedia Commons, dominio público.',
     heads(c) { H.sakura(c, CX - 90, CX - 40, 70); H.sakura(c, CX + 90, CX - 40, 70); H.sakura(c, CX, CX + 70, 70); H.leaf(c, CX - 40, CX + 10, 60, 14, 2.6); H.leaf(c, CX + 40, CX + 10, 60, 14, 0.5); H.text(c, '日本国', CX, CX - 190, 50, 700, 'sans-serif'); H.text(c, '百円', CX, CX + 195, 50, 700, 'sans-serif'); },
     tails(c) { H.text(c, '100', CX, CX - 20, 210, 800, SANS); H.text(c, '平成 30 年', CX, CX + 130, 44, 700, 'sans-serif'); c.beginPath(); c.arc(CX, CX, RR * 0.9, 0, Math.PI * 2); c.arc(CX, CX, RR * 0.86, 0, Math.PI * 2, true); c.fill(); } },
-  { id: 'br1', name: '1 real', country: 'Brasil', flag: '🇧🇷', outer: NICKEL, inner: GOLD, innerR: 0.64, thick: 0.16, size: 0.92, ttext: 'cruz', reeded: false,
+  { id: 'br1', name: '1 real', country: 'Brasil', flag: '🇧🇷', outer: NICKEL, inner: GOLD, innerR: 0.64, thick: 0.16, size: 0.92, ttext: 'cruz', reeded: false, photo: { heads: 'img/br1_h.jpg', tails: 'img/br1_t.jpg' }, credit: 'Fotos: Wikimedia Commons, dominio público.',
     heads(c) { H.bust(c, CX + 8, CX + 40, 200, 'liberty'); H.arcText(c, 'BRASIL', RR * 0.84, Math.PI * 1.3, Math.PI * 1.7, 52); for (let i = 0; i < 24; i++) { const a = i * Math.PI / 12; H.star(c, CX + Math.cos(a) * RR * 0.88, CX + Math.sin(a) * RR * 0.88, 7); } },
     tails(c) { H.text(c, '1', CX - 40, CX - 20, 240, 800, SANS); H.text(c, 'REAL', CX + 60, CX + 120, 52, 700, SANS); c.lineWidth = 6; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(CX + 60, CX - 200 + i * 30); c.lineTo(CX + 200, CX - 200 + i * 30); c.stroke(); } H.text(c, '2019', CX - 150, CX + 150, 28, 700, SANS); } },
   { id: 'pe1', name: '1 sol', country: 'Perú', flag: '🇵🇪', outer: NICKEL, inner: null, thick: 0.15, size: 0.9, ttext: 'cruz', reeded: true,
     heads(c) { c.beginPath(); c.moveTo(CX - 90, CX - 110); c.lineTo(CX + 90, CX - 110); c.lineTo(CX + 90, CX + 20); c.quadraticCurveTo(CX + 90, CX + 90, CX, CX + 120); c.quadraticCurveTo(CX - 90, CX + 90, CX - 90, CX + 20); c.closePath(); c.fill(); c.save(); c.globalCompositeOperation = 'destination-out'; H.vicuna(c, CX - 45, CX - 60, 55); H.tree(c, CX + 45, CX - 70, 55); H.cornucopia(c, CX, CX + 55, 60); c.restore(); H.wreath(c, CX, CX + 10, RR * 0.7, 1, 8); H.wreath(c, CX, CX + 10, RR * 0.7, -1, 8); H.arcText(c, 'BANCO CENTRAL DE RESERVA DEL PERU', RR * 0.86, Math.PI * 1.04, Math.PI * 1.96, 24); },
     tails(c) { H.text(c, 'S/', CX - 100, CX - 10, 90, 700, SANS); H.text(c, '1', CX + 50, CX - 20, 230, 800, SANS); H.text(c, 'UN SOL', CX, CX + 130, 46, 700, SANS); H.text(c, '2021', CX, CX + 190, 26, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
-  { id: 'co500', name: '500 pesos', country: 'Colombia', flag: '🇨🇴', outer: GOLD, inner: NICKEL, innerR: 0.66, thick: 0.16, size: 0.92, ttext: 'cruz', reeded: false,
+  { id: 'co500', name: '500 pesos', country: 'Colombia', flag: '🇨🇴', outer: GOLD, inner: NICKEL, innerR: 0.66, thick: 0.16, size: 0.92, ttext: 'cruz', reeded: false, photo: { tails: 'img/co500_t.jpg' }, credit: 'Reverso: foto de Wikimedia Commons, CC BY-SA 4.0. Anverso: ilustración.',
     heads(c) { H.frog(c, CX, CX + 10, 130); H.arcText(c, 'REPUBLICA DE COLOMBIA', RR * 0.84, Math.PI * 1.08, Math.PI * 1.92, 30); H.arcTextBottom(c, 'RANA DE CRISTAL', RR * 0.84, Math.PI * 0.2, Math.PI * 0.8, 24); },
     tails(c) { H.text(c, '500', CX, CX - 20, 190, 800, SANS); H.text(c, 'PESOS', CX, CX + 110, 46, 700, SANS); H.text(c, '2016', CX, CX + 180, 28, 700, SANS); c.beginPath(); c.arc(CX, CX, RR * 0.9, 0, Math.PI * 2); c.arc(CX, CX, RR * 0.87, 0, Math.PI * 2, true); c.fill(); } },
 ];
-const coinTex = {};
+const coinTex = {}, photoCache = {};
+function photoSrc(coin, side) { // user photo (localStorage) > bundled photo > null
+  try { const u = localStorage.getItem('moneda_photo_' + coin.id + '_' + side); if (u) return u; } catch (e) { }
+  return coin.photo && coin.photo[side] || null;
+}
+function loadPhoto(src) {
+  if (photoCache[src]) return photoCache[src];
+  const im = new Image(); im.onload = () => { im.ready = true; Object.keys(coinTex).forEach(k => delete coinTex[k]); onTexReload(); }; im.src = src;
+  photoCache[src] = im; return im;
+}
+let onTexReload = () => { };
+function drawPhotoFace(c, img) {
+  c.save(); c.beginPath(); c.arc(CX, CX, RR, 0, Math.PI * 2); c.clip();
+  c.drawImage(img, 0, 0, TEX, TEX);
+  // subtle rim shading so the photo reads as a solid disc
+  const g = c.createRadialGradient(CX, CX, RR * 0.9, CX, CX, RR); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.35)'); c.fillStyle = g; c.fillRect(0, 0, TEX, TEX);
+  c.restore();
+}
 function buildTex(coin) {
   if (coinTex[coin.id]) return coinTex[coin.id];
   const mk = side => {
     const cv = document.createElement('canvas'); cv.width = TEX; cv.height = TEX; const c = cv.getContext('2d');
+    const src = photoSrc(coin, side);
+    if (src) { const img = loadPhoto(src); if (img.ready || img.complete && img.naturalWidth) { drawPhotoFace(c, img); return cv; } }
     c.beginPath(); c.arc(CX, CX, RR, 0, Math.PI * 2); c.clip();
     const metal = (col, r, brushed) => {
       const g = c.createRadialGradient(CX - r * 0.35, CX - r * 0.4, r * 0.05, CX, CX, r * 1.05);
@@ -319,6 +338,7 @@ new ResizeObserver(resize).observe(canvas);
 const G = 40, DT = 1 / 200, REST = 0.42, FRICTION = 0.5, NR = 20;
 const coins = [];
 let rolling = false, rollStart = 0, needsDraw = true, lastT = 0, acc = 0;
+onTexReload = () => { coins.forEach(c => c.tex = buildTex(c.def)); needsDraw = true; if (typeof renderCoins === 'function') renderCoins(); };
 function makeCoin(def) {
   const R = 1.45 * def.size, T = def.thick * 1.45;
   const verts = [];
@@ -595,7 +615,55 @@ let toastT = null;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2000); }
 function openSheet(id) { closeSheets(); $(id).classList.add('open'); $('#backdrop').classList.add('show'); }
 function closeSheets() { $$('.sheet').forEach(s => s.classList.remove('open')); $('#backdrop').classList.remove('show'); }
+/* ---- user photos: crop a picture of your own coin ---- */
+let cropState = null;
+function openCrop(side, file) {
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    cropState = { img, side, zoom: 1, ox: 0, oy: 0 };
+    $('#cropTitle').textContent = (side === 'heads' ? 'Cara' : tailsName()) + ' · ' + coinDef().name;
+    $('#cropZoom').value = 1; $('#cropBox').classList.add('open'); drawCrop();
+  };
+  img.src = url;
+}
+function drawCrop() {
+  if (!cropState) return;
+  const cv = $('#cropCanvas'), c = cv.getContext('2d'), S = cv.width, { img, zoom, ox, oy } = cropState;
+  c.clearRect(0, 0, S, S); c.fillStyle = '#111'; c.fillRect(0, 0, S, S);
+  const base = S / Math.min(img.width, img.height) * zoom, w = img.width * base, h = img.height * base;
+  c.drawImage(img, S / 2 - w / 2 + ox, S / 2 - h / 2 + oy, w, h);
+  c.save(); c.beginPath(); c.rect(0, 0, S, S); c.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2, true); c.fillStyle = 'rgba(0,0,0,0.6)'; c.fill(); c.restore();
+  c.beginPath(); c.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); c.strokeStyle = '#e8c86a'; c.lineWidth = 2; c.stroke();
+}
+function saveCrop() {
+  if (!cropState) return;
+  const S = 512, out = document.createElement('canvas'); out.width = S; out.height = S; const c = out.getContext('2d');
+  const { img, zoom, ox, oy, side } = cropState, P = $('#cropCanvas').width, k = S / P;
+  const base = P / Math.min(img.width, img.height) * zoom, w = img.width * base * k, h = img.height * base * k;
+  c.drawImage(img, S / 2 - w / 2 + ox * k, S / 2 - h / 2 + oy * k, w, h);
+  try { localStorage.setItem('moneda_photo_' + coinDef().id + '_' + side, out.toDataURL('image/jpeg', 0.86)); }
+  catch (e) { toast('Sin espacio para guardar la foto'); return; }
+  cropState = null; $('#cropBox').classList.remove('open');
+  Object.keys(coinTex).forEach(k => delete coinTex[k]); Object.keys(photoCache).forEach(k => { if (k.startsWith('data:')) delete photoCache[k]; });
+  onTexReload(); renderSettings(); toast('Foto guardada');
+}
+function clearPhoto(side) {
+  try { localStorage.removeItem('moneda_photo_' + coinDef().id + '_' + side); } catch (e) { }
+  Object.keys(coinTex).forEach(k => delete coinTex[k]); onTexReload(); renderSettings(); toast('Foto quitada');
+}
+function renderPhotoOpts() {
+  const def = coinDef(); $('#photoCoin').textContent = def.flag + ' ' + def.name + ' · ' + def.country;
+  ['heads', 'tails'].forEach(side => {
+    let custom = false; try { custom = !!localStorage.getItem('moneda_photo_' + def.id + '_' + side); } catch (e) { }
+    const el = $('#ph_' + side); el.querySelector('.ps').textContent = custom ? 'Tu foto' : (def.photo && def.photo[side] ? 'Foto real' : 'Ilustración');
+    el.querySelector('.rm').style.display = custom ? '' : 'none';
+    el.querySelector('.lbl').textContent = side === 'heads' ? 'Cara' : tailsName();
+  });
+  $('#credit').textContent = def.credit || 'Ilustración propia (no hay fotos con licencia libre de esta moneda). Puedes fotografiar tu moneda con los botones de arriba.';
+}
 function renderSettings() {
+  renderPhotoOpts();
   $('#optSound').classList.toggle('on', cfg.sound); $('#optShake').classList.toggle('on', cfg.shake); $('#optHaptic').classList.toggle('on', cfg.haptic); $('#optEco').classList.toggle('on', cfg.eco);
   $('#power').value = cfg.power;
   $$('.tname').forEach(b => b.classList.toggle('on', b.dataset.v === cfg.tailsName));
@@ -651,6 +719,21 @@ function bind() {
   window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.key === 'Enter') && document.activeElement === document.body) { e.preventDefault(); flip(); } if (e.key === 'Escape') closeSheets(); });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!cfg.theme) applyTheme(); });
   if (cfg.shake && window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission !== 'function') window.addEventListener('devicemotion', onMotion);
+  ['heads', 'tails'].forEach(side => {
+    const inp = $('#file_' + side);
+    $('#ph_' + side).querySelector('.pick').addEventListener('click', () => inp.click());
+    inp.addEventListener('change', () => { if (inp.files && inp.files[0]) openCrop(side, inp.files[0]); inp.value = ''; });
+    $('#ph_' + side).querySelector('.rm').addEventListener('click', () => clearPhoto(side));
+  });
+  $('#cropZoom').addEventListener('input', e => { if (cropState) { cropState.zoom = parseFloat(e.target.value); drawCrop(); } });
+  $('#cropSave').addEventListener('click', saveCrop);
+  $('#cropCancel').addEventListener('click', () => { cropState = null; $('#cropBox').classList.remove('open'); });
+  { const cv = $('#cropCanvas'); let last = null;
+    const st = (x, y) => { last = [x, y]; }, mv = (x, y) => { if (!last || !cropState) return; const r = cv.getBoundingClientRect(), k = cv.width / r.width; cropState.ox += (x - last[0]) * k; cropState.oy += (y - last[1]) * k; last = [x, y]; drawCrop(); };
+    cv.addEventListener('mousedown', e => st(e.clientX, e.clientY)); window.addEventListener('mousemove', e => mv(e.clientX, e.clientY)); window.addEventListener('mouseup', () => last = null);
+    cv.addEventListener('touchstart', e => { const t = e.touches[0]; st(t.clientX, t.clientY); }, { passive: true });
+    cv.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; mv(t.clientX, t.clientY); }, { passive: false });
+    cv.addEventListener('touchend', () => last = null); }
   $('#viewBtn').addEventListener('click', () => { cfg.view = cfg.view === 'top' ? 'persp' : 'top'; LS.set('cfg', cfg); resize(); coins.forEach(updateWorld); $('#viewBtn').textContent = cfg.view === 'top' ? '◎' : '⬒'; toast(cfg.view === 'top' ? 'Vista desde arriba' : 'Vista en perspectiva'); });
   $('#viewBtn').textContent = cfg.view === 'top' ? '◎' : '⬒';
   const stage = $('.stage'), fsBtn = $('#fsBtn');

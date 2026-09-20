@@ -168,6 +168,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
 .coin-btn small{font-size:10px;color:var(--txt3)}
 .coin-btn.on{border-color:var(--acc);background:var(--acc-soft)}
 .fs.view{top:70px}
+.photoCoin{font-size:13px;font-weight:700;margin-bottom:6px}
+.phrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bdr);font-size:13px}
+.phrow .lbl{font-weight:800;width:44px}.phrow .ps{-webkit-flex:1;flex:1;color:var(--txt3)}
+.phrow .pick{padding:6px 10px;border-radius:10px;background:var(--acc-soft);color:var(--acc);font-weight:700;font-size:12px;border:1px solid var(--acc)}
+.phrow .rm{padding:6px 10px;border-radius:10px;background:var(--sur2);color:var(--txt2);font-weight:700;font-size:12px}
+.cropbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:40;display:none;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;padding:16px}
+.cropbox.open{display:-webkit-flex;display:flex}
+.cropin{background:var(--sur);border-radius:20px;padding:14px;width:100%;max-width:360px}
+.cropin h2{font-size:16px;font-weight:800;margin-bottom:8px}
+#cropCanvas{width:100%;height:auto;border-radius:12px;touch-action:none;display:block}
 .hrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr)}
 .hrow b{font-size:16px;font-weight:800;min-width:60px;color:var(--acc)}
 .hrow b.tl{color:var(--txt2)}
@@ -225,11 +235,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
   <div class="seg"><button class="tname" data-v="sello">Sello</button><button class="tname" data-v="cruz">Cruz</button></div>
   <h3>Fuerza del lanzamiento</h3>
   <input type="range" id="power" min="0.7" max="1.5" step="0.05">
+  <h3>Fotos de la moneda seleccionada</h3>
+  <div class="photoCoin" id="photoCoin"></div>
+  <div class="phrow" id="ph_heads"><span class="lbl">Cara</span><span class="ps"></span><button class="pick">📷 Usar mi foto</button><button class="rm">Quitar</button></div>
+  <div class="phrow" id="ph_tails"><span class="lbl">Sello</span><span class="ps"></span><button class="pick">📷 Usar mi foto</button><button class="rm">Quitar</button></div>
+  <input type="file" id="file_heads" accept="image/*" capture="environment" hidden><input type="file" id="file_tails" accept="image/*" capture="environment" hidden>
+  <p class="about" id="credit"></p>
   <h3>Mesa</h3>
   <div class="swatches" id="tables"></div>
   <p class="about">Cara o Sello. — moneda como cuerpo rígido: gravedad, giro, rebote, fricción y colisiones. El resultado se lee de la cara que queda arriba, sin trucos; si cae de canto, se vuelca sola. Diseños de monedas estilizados, no reproducciones oficiales.<br>Atajos: toca o desliza sobre la mesa · espacio = lanzar · botón ◎ / ⬒ en la mesa cambia entre vista desde arriba (la moneda crece al acercarse a la cámara) y perspectiva.<br><br><b>Instalar en iPhone:</b> Safari → Compartir → «Añadir a pantalla de inicio». Tras la primera carga funciona sin conexión.</p>
 </div>
 
+<div class="cropbox" id="cropBox">
+  <div class="cropin">
+    <h2 id="cropTitle">Recortar</h2>
+    <canvas id="cropCanvas" width="600" height="600"></canvas>
+    <p class="about">Arrastra para centrar la moneda en el círculo y ajusta el zoom.</p>
+    <input type="range" id="cropZoom" min="1" max="4" step="0.02" value="1">
+    <div class="row"><button class="tog" id="cropCancel">Cancelar</button><button class="roll" id="cropSave">Guardar</button></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script src="app.js"></script>
 </body>
