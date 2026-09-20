@@ -167,6 +167,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
 .coin-btn b{font-size:11px;font-weight:800;white-space:nowrap}
 .coin-btn small{font-size:10px;color:var(--txt3)}
 .coin-btn.on{border-color:var(--acc);background:var(--acc-soft)}
+.fs.view{top:70px}
 .hrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr)}
 .hrow b{font-size:16px;font-weight:800;min-width:60px;color:var(--acc)}
 .hrow b.tl{color:var(--txt2)}
@@ -188,6 +189,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
   <canvas id="table" aria-label="Mesa. Toca para lanzar la moneda"></canvas>
   <div class="caption"><span id="status">Toca la mesa para lanzar</span></div>
   <button class="fs" id="fsBtn" aria-label="Pantalla completa">⛶</button>
+  <button class="fs view" id="viewBtn" aria-label="Cambiar vista">⬒</button>
   <div class="result" id="result" aria-live="polite"><div id="big">—</div><div id="sub"></div></div>
 </div>
 
@@ -222,10 +224,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
   <h3>Nombre del reverso</h3>
   <div class="seg"><button class="tname" data-v="sello">Sello</button><button class="tname" data-v="cruz">Cruz</button></div>
   <h3>Fuerza del lanzamiento</h3>
-  <input type="range" id="power" min="0.7" max="1.4" step="0.05">
+  <input type="range" id="power" min="0.7" max="1.5" step="0.05">
   <h3>Mesa</h3>
   <div class="swatches" id="tables"></div>
-  <p class="about">Cara o Sello. — moneda como cuerpo rígido: gravedad, giro, rebote, fricción y colisiones. El resultado se lee de la cara que queda arriba, sin trucos; si cae de canto, se vuelca sola. Diseños de monedas estilizados, no reproducciones oficiales.<br>Atajos: toca o desliza sobre la mesa · espacio = lanzar.<br><br><b>Instalar en iPhone:</b> Safari → Compartir → «Añadir a pantalla de inicio». Tras la primera carga funciona sin conexión.</p>
+  <p class="about">Cara o Sello. — moneda como cuerpo rígido: gravedad, giro, rebote, fricción y colisiones. El resultado se lee de la cara que queda arriba, sin trucos; si cae de canto, se vuelca sola. Diseños de monedas estilizados, no reproducciones oficiales.<br>Atajos: toca o desliza sobre la mesa · espacio = lanzar · botón ◎ / ⬒ en la mesa cambia entre vista desde arriba (la moneda crece al acercarse a la cámara) y perspectiva.<br><br><b>Instalar en iPhone:</b> Safari → Compartir → «Añadir a pantalla de inicio». Tras la primera carga funciona sin conexión.</p>
 </div>
 
 <div class="toast" id="toast"></div>

@@ -47,111 +47,198 @@ const hex2rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), 
 const rgbStr = (c, m, add) => `rgb(${clamp(c[0] * m + (add || 0), 0, 255) | 0},${clamp(c[1] * m + (add || 0), 0, 255) | 0},${clamp(c[2] * m + (add || 0), 0, 255) | 0})`;
 
 /* ================= Coins ================= */
-const GOLD = '#d4b04c', GOLD2 = '#a8862f', SILVER = '#d9dbe0', SILVER2 = '#a4a8b0', COPPER = '#c4784a', BRONZE = '#b9925a';
-const TEX = 512;
-// helpers for face drawing (ctx in 512x512 space, center 256, radius ~236)
+const dk = (hex, m) => rgbStr(hex2rgb(hex), m);
+/* Coin designs — stylized vector renditions with embossed relief (not official reproductions) */
+const GOLD = '#d2ad4e', SILVER = '#d6d8dd', COPPER = '#b9733f', NICKEL = '#c9cbd0';
+const TEX = 640, CX = TEX / 2, RR = TEX / 2 - 6; // texture size, center, radius
+const SERIF = 'Georgia, "Times New Roman", "Palatino", serif', SANS = '"Helvetica Neue", Arial, sans-serif';
 const H = {
-  arcText(c, txt, r, a0, a1, size, color, weight) {
-    c.save(); c.fillStyle = color; c.font = `${weight || 700} ${size}px Georgia, "Times New Roman", serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  arcText(c, txt, r, a0, a1, size, weight, font, spacingFix) {
+    c.save(); c.font = `${weight || 700} ${size}px ${font || SERIF}`; c.textAlign = 'center'; c.textBaseline = 'middle';
     const n = txt.length, total = a1 - a0;
-    for (let i = 0; i < n; i++) { const a = a0 + total * (i + 0.5) / n; c.save(); c.translate(256 + Math.cos(a) * r, 256 + Math.sin(a) * r); c.rotate(a + Math.PI / 2); c.fillText(txt[i], 0, 0); c.restore(); }
+    for (let i = 0; i < n; i++) { const a = a0 + total * (i + 0.5) / n; c.save(); c.translate(CX + Math.cos(a) * r, CX + Math.sin(a) * r); c.rotate(a + Math.PI / 2 + (spacingFix ? Math.PI : 0)); c.fillText(txt[i], 0, 0); c.restore(); }
     c.restore();
   },
-  text(c, txt, x, y, size, color, weight, font) { c.fillStyle = color; c.font = `${weight || 800} ${size}px ${font || 'Georgia, "Times New Roman", serif'}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, x, y); },
-  star(c, x, y, r, color, pts) {
+  arcTextBottom(c, txt, r, a0, a1, size, weight, font) { // reads left→right along the bottom arc
+    c.save(); c.font = `${weight || 700} ${size}px ${font || SERIF}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    const n = txt.length, total = a1 - a0;
+    for (let i = 0; i < n; i++) { const a = a1 - total * (i + 0.5) / n; c.save(); c.translate(CX + Math.cos(a) * r, CX + Math.sin(a) * r); c.rotate(a - Math.PI / 2); c.fillText(txt[i], 0, 0); c.restore(); }
+    c.restore();
+  },
+  text(c, txt, x, y, size, weight, font) { c.font = `${weight || 800} ${size}px ${font || SERIF}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, x, y); },
+  star(c, x, y, r, pts) {
     pts = pts || 5; c.beginPath();
     for (let i = 0; i < pts * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / pts, rr = i % 2 ? r * 0.4 : r; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
-    c.closePath(); c.fillStyle = color; c.fill();
+    c.closePath(); c.fill();
   },
-  laurel(c, x, y, r, color, side) {
-    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 3;
-    for (let i = 0; i < 9; i++) {
-      const ang = side > 0 ? Math.PI * 0.62 + i * 0.1 : Math.PI * 0.38 - i * 0.1;
-      const px = x + Math.cos(ang) * r, py = y + Math.sin(ang) * r;
-      c.save(); c.translate(px, py); c.rotate(ang + (side > 0 ? -0.9 : 0.9)); c.beginPath(); c.ellipse(0, 0, 14, 6, 0, 0, Math.PI * 2); c.fill(); c.restore();
+  leaf(c, x, y, len, wid, ang) { c.save(); c.translate(x, y); c.rotate(ang); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(len * 0.5, -wid, len, 0); c.quadraticCurveTo(len * 0.5, wid, 0, 0); c.fill(); c.restore(); },
+  wreath(c, x, y, r, side, n) { // laurel branch along an arc; side +1 = left, -1 = right
+    n = n || 11; c.lineWidth = 4; c.lineCap = 'round';
+    const a0 = side > 0 ? Math.PI * 0.55 : Math.PI * 0.45, a1 = side > 0 ? Math.PI * 1.42 : -Math.PI * 0.42;
+    c.beginPath(); c.arc(x, y, r, a0, a1, side < 0); c.stroke();
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1), a = a0 + (a1 - a0) * t, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r, tangent = a + (side > 0 ? Math.PI / 2 : -Math.PI / 2);
+      H.leaf(c, px, py, 30, 9, tangent + 0.55); H.leaf(c, px, py, 30, 9, tangent - 0.55);
     }
-    c.beginPath(); c.arc(x, y, r, side > 0 ? Math.PI * 0.6 : Math.PI * 0.4, side > 0 ? Math.PI * 1.45 : -Math.PI * 0.45, side < 0); c.stroke();
   },
-  profile(c, x, y, s, color) { // stylized head silhouette facing left
-    c.fillStyle = color; c.beginPath();
-    c.moveTo(x + 0.1 * s, y + 0.55 * s); c.lineTo(x - 0.05 * s, y + 0.55 * s); c.lineTo(x - 0.05 * s, y + 0.3 * s);
-    c.bezierCurveTo(x - 0.45 * s, y + 0.25 * s, x - 0.5 * s, y - 0.05 * s, x - 0.38 * s, y - 0.2 * s);
-    c.bezierCurveTo(x - 0.42 * s, y - 0.3 * s, x - 0.3 * s, y - 0.35 * s, x - 0.33 * s, y - 0.42 * s);
-    c.bezierCurveTo(x - 0.2 * s, y - 0.62 * s, x + 0.25 * s, y - 0.62 * s, x + 0.32 * s, y - 0.3 * s);
-    c.bezierCurveTo(x + 0.36 * s, y, x + 0.32 * s, y + 0.2 * s, x + 0.1 * s, y + 0.3 * s); c.closePath(); c.fill();
+  bead(c, r, n, size) { for (let i = 0; i < n; i++) { const a = i * Math.PI * 2 / n; c.beginPath(); c.arc(CX + Math.cos(a) * r, CX + Math.sin(a) * r, size, 0, Math.PI * 2); c.fill(); } },
+  bust(c, x, y, s, style) { // stylized effigy: head in profile facing left + shoulders
+    c.save(); c.translate(x, y); c.scale(s / 100, s / 100);
+    // shoulders / torso
+    c.beginPath(); c.moveTo(-58, 62); c.quadraticCurveTo(-40, 28, -12, 22); c.lineTo(10, 22); c.quadraticCurveTo(52, 26, 62, 62); c.closePath(); c.fill();
+    if (style === 'cardinal') { c.save(); c.globalCompositeOperation = 'destination-out'; c.fillRect(-9, 22, 10, 11); c.restore(); } // clerical collar
+    if (style === 'ohiggins') { c.save(); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.moveTo(-14, 24); c.lineTo(-2, 40); c.lineTo(-24, 40); c.closePath(); c.fill(); c.restore(); c.beginPath(); c.arc(46, 40, 10, 0, Math.PI * 2); c.fill(); } // high collar + epaulette
+    // neck
+    c.beginPath(); c.moveTo(-12, 24); c.lineTo(-10, 4); c.lineTo(14, 2); c.lineTo(14, 24); c.closePath(); c.fill();
+    // head
+    c.beginPath(); c.moveTo(-8, 8);
+    c.bezierCurveTo(-22, 6, -26, -6, -24, -14); // chin → jaw
+    c.bezierCurveTo(-34, -16, -33, -24, -27, -26); // lips
+    c.bezierCurveTo(-30, -30, -30, -34, -26, -36); // nose base
+    c.bezierCurveTo(-36, -40, -34, -50, -27, -50); // nose
+    c.bezierCurveTo(-30, -56, -28, -60, -24, -62); // brow
+    c.bezierCurveTo(-18, -78, 10, -84, 24, -68); // forehead → crown
+    c.bezierCurveTo(32, -58, 30, -40, 26, -28); // back of head
+    c.bezierCurveTo(28, -14, 20, 0, 14, 4); c.closePath(); c.fill();
+    if (style === 'mapuche') { // headband + braid
+      c.save(); c.globalCompositeOperation = 'destination-out'; c.lineWidth = 3; c.beginPath(); c.moveTo(-26, -58); c.quadraticCurveTo(0, -66, 28, -58); c.stroke(); c.restore();
+      c.beginPath(); c.moveTo(22, -50); c.quadraticCurveTo(40, -20, 30, 30); c.quadraticCurveTo(24, 40, 18, 30); c.quadraticCurveTo(26, -10, 14, -40); c.closePath(); c.fill();
+    }
+    if (style === 'cardinal') { c.save(); c.globalCompositeOperation = 'destination-out'; c.lineWidth = 2.5; c.beginPath(); c.arc(4, -68, 22, Math.PI * 1.15, Math.PI * 1.95); c.stroke(); c.restore(); } // zucchetto line
+    if (style === 'queen') { c.beginPath(); c.moveTo(-6, -80); c.lineTo(2, -96); c.lineTo(10, -84); c.lineTo(18, -98); c.lineTo(24, -82); c.lineTo(30, -92); c.lineTo(30, -74); c.closePath(); c.fill(); }
+    if (style === 'liberty') { c.beginPath(); c.moveTo(-10, -84); c.quadraticCurveTo(10, -100, 26, -80); c.quadraticCurveTo(14, -90, -4, -80); c.closePath(); c.fill(); } // cap
+    // eye (cut out)
+    c.save(); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.ellipse(-12, -46, 4.5, 2.5, -0.2, 0, Math.PI * 2); c.fill(); c.restore();
+    c.restore();
   },
-  sun(c, x, y, r, color, rays) {
-    rays = rays || 16; c.fillStyle = color; c.beginPath(); c.arc(x, y, r * 0.5, 0, Math.PI * 2); c.fill();
-    for (let i = 0; i < rays; i++) { const a = i * Math.PI * 2 / rays; c.save(); c.translate(x, y); c.rotate(a); c.beginPath(); c.moveTo(r * 0.55, -r * 0.09); c.lineTo(r, 0); c.lineTo(r * 0.55, r * 0.09); c.closePath(); c.fill(); c.restore(); }
+  chileShield(c, x, y, s) { // shield with star, plume, huemul (left) and condor (right) — simplified
+    c.save(); c.translate(x, y); c.scale(s / 100, s / 100);
+    c.beginPath(); c.moveTo(-30, -26); c.lineTo(30, -26); c.lineTo(30, 6); c.quadraticCurveTo(30, 30, 0, 40); c.quadraticCurveTo(-30, 30, -30, 6); c.closePath(); c.fill();
+    c.save(); c.globalCompositeOperation = 'destination-out'; c.fillRect(-30, 4, 60, 3); H.star(c, 0, -10, 12); c.restore();
+    // plume
+    for (let i = -1; i <= 1; i++) { H.leaf(c, i * 12, -28, 26, 6, -Math.PI / 2 + i * 0.35); }
+    // huemul (deer) left
+    c.beginPath(); c.ellipse(-52, 8, 18, 10, 0.2, 0, Math.PI * 2); c.fill(); c.beginPath(); c.ellipse(-66, -8, 7, 6, 0, 0, Math.PI * 2); c.fill();
+    c.lineWidth = 3; c.beginPath(); c.moveTo(-68, -12); c.lineTo(-74, -26); c.moveTo(-64, -13); c.lineTo(-62, -26); c.stroke();
+    [-60, -52, -44, -38].forEach((lx, i) => { c.beginPath(); c.moveTo(lx, 14); c.lineTo(lx + (i % 2 ? 2 : -2), 34); c.stroke(); });
+    // condor right
+    c.beginPath(); c.ellipse(52, 8, 16, 11, -0.2, 0, Math.PI * 2); c.fill(); c.beginPath(); c.arc(64, -8, 6, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.moveTo(40, 0); c.quadraticCurveTo(46, -34, 82, -30); c.quadraticCurveTo(60, -22, 56, 2); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(68, -8); c.lineTo(76, -5); c.lineTo(68, -3); c.closePath(); c.fill();
+    // motto banner
+    c.fillRect(-46, 46, 92, 12); c.save(); c.globalCompositeOperation = 'destination-out'; H.text(c, 'POR LA RAZON O LA FUERZA', 0, 52, 8, 700, SANS); c.restore();
+    c.restore();
   },
-  flower(c, x, y, r, color) { c.fillStyle = color; for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5 - Math.PI / 2; c.beginPath(); c.ellipse(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.55, r * 0.45, r * 0.3, a, 0, Math.PI * 2); c.fill(); } c.beginPath(); c.arc(x, y, r * 0.22, 0, Math.PI * 2); c.fillStyle = '#fff'; c.globalAlpha = 0.5; c.fill(); c.globalAlpha = 1; },
-  shield(c, x, y, s, fill, stroke) { c.beginPath(); c.moveTo(x - s * 0.5, y - s * 0.5); c.lineTo(x + s * 0.5, y - s * 0.5); c.lineTo(x + s * 0.5, y + s * 0.15); c.quadraticCurveTo(x + s * 0.5, y + s * 0.55, x, y + s * 0.7); c.quadraticCurveTo(x - s * 0.5, y + s * 0.55, x - s * 0.5, y + s * 0.15); c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 6; c.strokeStyle = stroke; c.stroke(); },
-  crown(c, x, y, s, color) { c.fillStyle = color; c.beginPath(); c.moveTo(x - s * 0.5, y + s * 0.3); c.lineTo(x - s * 0.5, y - s * 0.2); c.lineTo(x - s * 0.25, y + s * 0.05); c.lineTo(x, y - s * 0.4); c.lineTo(x + s * 0.25, y + s * 0.05); c.lineTo(x + s * 0.5, y - s * 0.2); c.lineTo(x + s * 0.5, y + s * 0.3); c.closePath(); c.fill(); c.fillRect(x - s * 0.5, y + s * 0.32, s, s * 0.14); },
-  eagle(c, x, y, s, color) { c.fillStyle = color; c.beginPath(); c.moveTo(x, y - s * 0.35); c.bezierCurveTo(x + s * 0.3, y - s * 0.6, x + s * 0.9, y - s * 0.5, x + s * 0.95, y - s * 0.1); c.bezierCurveTo(x + s * 0.6, y - s * 0.1, x + s * 0.45, y + s * 0.05, x + s * 0.15, y + s * 0.15); c.lineTo(x + s * 0.1, y + s * 0.5); c.lineTo(x - s * 0.1, y + s * 0.5); c.lineTo(x - s * 0.15, y + s * 0.15); c.bezierCurveTo(x - s * 0.45, y + s * 0.05, x - s * 0.6, y - s * 0.1, x - s * 0.95, y - s * 0.1); c.bezierCurveTo(x - s * 0.9, y - s * 0.5, x - s * 0.3, y - s * 0.6, x, y - s * 0.35); c.closePath(); c.fill(); c.beginPath(); c.arc(x, y - s * 0.4, s * 0.12, 0, Math.PI * 2); c.fill(); },
-  ring(c, r0, r1, color) { c.beginPath(); c.arc(256, 256, r1, 0, Math.PI * 2); c.arc(256, 256, r0, 0, Math.PI * 2, true); c.fillStyle = color; c.fill(); },
-  dots(c, r, n, color, size) { c.fillStyle = color; for (let i = 0; i < n; i++) { const a = i * Math.PI * 2 / n; c.beginPath(); c.arc(256 + Math.cos(a) * r, 256 + Math.sin(a) * r, size || 3, 0, Math.PI * 2); c.fill(); } }
+  eagle(c, x, y, s) { // heraldic eagle, wings spread
+    c.save(); c.translate(x, y); c.scale(s / 100, s / 100);
+    const wing = dir => { c.beginPath(); c.moveTo(0, -10); c.bezierCurveTo(dir * 20, -40, dir * 70, -50, dir * 96, -28); c.bezierCurveTo(dir * 90, -22, dir * 84, -16, dir * 78, -10); c.bezierCurveTo(dir * 82, -6, dir * 84, 0, dir * 70, 4); c.bezierCurveTo(dir * 72, 10, dir * 66, 14, dir * 52, 14); c.bezierCurveTo(dir * 40, 18, dir * 30, 20, dir * 10, 16); c.closePath(); c.fill(); };
+    wing(1); wing(-1);
+    c.beginPath(); c.ellipse(0, 8, 16, 26, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(0, -26, 11, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(8, -28); c.lineTo(22, -24); c.lineTo(9, -20); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(-14, 30); c.lineTo(14, 30); c.lineTo(20, 52); c.lineTo(-20, 52); c.closePath(); c.fill(); // tail
+    c.lineWidth = 4; [-10, 10].forEach(lx => { c.beginPath(); c.moveTo(lx, 32); c.lineTo(lx * 1.6, 48); c.stroke(); });
+    c.restore();
+  },
+  sunFace(c, x, y, r, rays) { // Sun of May
+    rays = rays || 32; c.beginPath(); c.arc(x, y, r * 0.48, 0, Math.PI * 2); c.fill();
+    for (let i = 0; i < rays; i++) { const a = i * Math.PI * 2 / rays, wavy = i % 2; c.save(); c.translate(x, y); c.rotate(a); c.beginPath(); c.moveTo(r * 0.5, -r * 0.06); if (wavy) { c.quadraticCurveTo(r * 0.75, -r * 0.14, r, 0); c.quadraticCurveTo(r * 0.75, r * 0.14, r * 0.5, r * 0.06); } else { c.lineTo(r, 0); c.lineTo(r * 0.5, r * 0.06); } c.closePath(); c.fill(); c.restore(); }
+    c.save(); c.globalCompositeOperation = 'destination-out'; c.lineWidth = r * 0.04; c.beginPath(); c.arc(x - r * 0.16, y - r * 0.1, r * 0.05, 0, Math.PI * 2); c.arc(x + r * 0.16, y - r * 0.1, r * 0.05, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(x - r * 0.06, y - r * 0.12); c.quadraticCurveTo(x - r * 0.14, y + r * 0.02, x - r * 0.04, y + r * 0.06); c.stroke(); c.beginPath(); c.arc(x, y + r * 0.14, r * 0.16, 0.25, Math.PI - 0.25); c.stroke(); c.restore();
+  },
+  sakura(c, x, y, r) { for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5 - Math.PI / 2; c.save(); c.translate(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.5); c.rotate(a); c.beginPath(); c.moveTo(-r * 0.5, 0); c.quadraticCurveTo(-r * 0.2, -r * 0.42, r * 0.36, -r * 0.16); c.lineTo(r * 0.5, 0); c.lineTo(r * 0.36, r * 0.16); c.quadraticCurveTo(-r * 0.2, r * 0.42, -r * 0.5, 0); c.fill(); c.restore(); } c.save(); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(x, y, r * 0.14, 0, Math.PI * 2); c.fill(); c.restore(); },
+  cactusEagle(c, x, y, s) { // Mexican eagle on nopal with serpent — simplified
+    c.save(); c.translate(x, y); c.scale(s / 100, s / 100);
+    for (let i = -2; i <= 2; i++) { c.beginPath(); c.ellipse(i * 22, 50 - Math.abs(i) * 6, 12, 22, i * 0.25, 0, Math.PI * 2); c.fill(); }
+    c.beginPath(); c.ellipse(-4, 4, 20, 30, 0.3, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.moveTo(6, -14); c.bezierCurveTo(30, -60, 60, -50, 70, -30); c.bezierCurveTo(50, -30, 36, -14, 16, 4); c.closePath(); c.fill();
+    c.beginPath(); c.arc(-20, -26, 10, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(-28, -28); c.lineTo(-42, -22); c.lineTo(-28, -20); c.closePath(); c.fill();
+    c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(-40, -20); c.quadraticCurveTo(-60, 0, -44, 18); c.quadraticCurveTo(-30, 30, -50, 40); c.stroke();
+    c.restore();
+  },
+  frog(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s / 100, s / 100); c.beginPath(); c.ellipse(0, 0, 40, 26, 0, 0, Math.PI * 2); c.fill(); c.beginPath(); c.ellipse(-36, -14, 16, 12, 0, 0, Math.PI * 2); c.fill(); c.beginPath(); c.arc(-42, -22, 5, 0, Math.PI * 2); c.fill(); c.lineWidth = 8; c.lineCap = 'round'; [[-20, 18, -46, 40], [22, 18, 52, 34], [30, -8, 60, -26], [-14, -20, -30, -44]].forEach(l => { c.beginPath(); c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); c.stroke(); }); c.restore(); },
+  vicuna(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s / 100, s / 100); c.beginPath(); c.ellipse(0, 10, 30, 16, 0, 0, Math.PI * 2); c.fill(); c.lineWidth = 9; c.lineCap = 'round'; c.beginPath(); c.moveTo(-22, 0); c.lineTo(-30, -44); c.stroke(); c.beginPath(); c.ellipse(-32, -50, 10, 7, -0.3, 0, Math.PI * 2); c.fill(); c.lineWidth = 6; [[-18, 22, -20, 48], [-6, 24, -8, 48], [8, 24, 10, 48], [20, 22, 24, 48]].forEach(l => { c.beginPath(); c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); c.stroke(); }); c.restore(); },
+  cornucopia(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s / 100, s / 100); c.lineWidth = 14; c.lineCap = 'round'; c.beginPath(); c.moveTo(-30, 30); c.quadraticCurveTo(10, 40, 26, 0); c.quadraticCurveTo(34, -24, 14, -30); c.stroke(); for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(-30 + Math.cos(i) * 14, 30 + Math.sin(i * 1.7) * 12, 7, 0, Math.PI * 2); c.fill(); } c.restore(); },
+  tree(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s / 100, s / 100); c.fillRect(-5, 0, 10, 40); c.beginPath(); c.arc(0, -10, 28, 0, Math.PI * 2); c.arc(-18, 4, 18, 0, Math.PI * 2); c.arc(18, 4, 18, 0, Math.PI * 2); c.fill(); c.restore(); },
+  europe(c, x, y, s) { // very rough continent outline
+    c.save(); c.translate(x, y); c.scale(s / 100, s / 100); c.beginPath(); c.moveTo(-60, 40); c.lineTo(-40, 10); c.lineTo(-56, -6); c.lineTo(-30, -20); c.lineTo(-20, -50); c.lineTo(0, -70); c.lineTo(20, -60); c.lineTo(16, -30); c.lineTo(50, -40); c.lineTo(70, -10); c.lineTo(60, 20); c.lineTo(30, 30); c.lineTo(30, 56); c.lineTo(10, 40); c.lineTo(-20, 60); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(-30, -60); c.lineTo(-10, -84); c.lineTo(-4, -60); c.closePath(); c.fill(); c.beginPath(); c.moveTo(-70, -10); c.lineTo(-60, -30); c.lineTo(-52, -12); c.closePath(); c.fill(); c.restore();
+  },
+  rose(c, x, y, r) { for (let k = 0; k < 2; k++) for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5 + k * Math.PI / 5, rr = k ? r * 0.55 : r; c.beginPath(); c.ellipse(x + Math.cos(a) * rr * 0.55, y + Math.sin(a) * rr * 0.55, rr * 0.5, rr * 0.34, a, 0, Math.PI * 2); c.fill(); } },
 };
-const dk = (hex, m) => rgbStr(hex2rgb(hex), m);
 const COINS = [
-  { id: 'cl500', name: '500 pesos', country: 'Chile', flag: '🇨🇱', outer: GOLD, inner: SILVER, innerR: 0.68, thick: 0.17, size: 1.0, ttext: 'sello',
-    heads(c, i) { H.arcText(c, 'REPUBLICA DE CHILE', 205, Math.PI * 1.15, Math.PI * 1.85, 30, dk(GOLD, 0.55)); H.profile(c, 262, 250, 300, i); H.text(c, '2024', 256, 425, 26, dk(GOLD, 0.55)); },
-    tails(c, i) { H.text(c, '500', 256, 235, 150, i, 800, '"Helvetica Neue", Arial, sans-serif'); H.text(c, 'PESOS', 256, 335, 40, i, 700, '"Helvetica Neue", Arial, sans-serif'); H.laurel(c, 256, 256, 200, dk(GOLD, 0.6), 1); H.laurel(c, 256, 256, 200, dk(GOLD, 0.6), -1); H.star(c, 256, 100, 22, dk(GOLD, 0.6)); } },
-  { id: 'cl100', name: '100 pesos', country: 'Chile', flag: '🇨🇱', outer: SILVER, inner: GOLD, innerR: 0.68, thick: 0.17, size: 0.95, ttext: 'sello',
-    heads(c, i) { H.arcText(c, 'REPUBLICA DE CHILE', 205, Math.PI * 1.15, Math.PI * 1.85, 30, dk(SILVER, 0.5)); H.profile(c, 262, 250, 300, i); H.text(c, '2023', 256, 425, 26, dk(SILVER, 0.5)); },
-    tails(c, i) { H.text(c, '100', 256, 235, 150, i, 800, '"Helvetica Neue", Arial, sans-serif'); H.text(c, 'PESOS', 256, 335, 40, i, 700, '"Helvetica Neue", Arial, sans-serif'); H.laurel(c, 256, 256, 200, dk(SILVER, 0.5), 1); H.laurel(c, 256, 256, 200, dk(SILVER, 0.5), -1); H.star(c, 256, 100, 22, dk(SILVER, 0.5)); } },
-  { id: 'cl10', name: '10 pesos', country: 'Chile', flag: '🇨🇱', outer: GOLD, inner: null, thick: 0.14, size: 0.82, ttext: 'sello',
-    heads(c, i) { H.arcText(c, 'REPUBLICA DE CHILE', 205, Math.PI * 1.15, Math.PI * 1.85, 30, i); H.profile(c, 262, 250, 290, i); H.text(c, '2022', 256, 425, 26, i); },
-    tails(c, i) { H.text(c, '10', 256, 235, 170, i); H.text(c, 'PESOS', 256, 340, 40, i); H.star(c, 256, 105, 24, i); } },
-  { id: 'usq', name: 'Quarter dollar', country: 'Estados Unidos', flag: '🇺🇸', outer: SILVER, inner: null, thick: 0.14, size: 0.95, ttext: 'cruz',
-    heads(c, i) { H.arcText(c, 'LIBERTY', 205, Math.PI * 1.3, Math.PI * 1.7, 34, i); H.profile(c, 262, 250, 300, i); H.arcText(c, 'IN GOD WE TRUST', 210, Math.PI * 0.2, Math.PI * 0.8, 22, i); H.text(c, '1998', 256, 420, 26, i); },
-    tails(c, i) { H.arcText(c, 'UNITED STATES OF AMERICA', 210, Math.PI * 1.1, Math.PI * 1.9, 24, i); H.eagle(c, 256, 250, 190, i); H.arcText(c, 'QUARTER DOLLAR', 212, Math.PI * 0.2, Math.PI * 0.8, 26, i); } },
-  { id: 'eur1', name: '1 euro', country: 'Unión Europea', flag: '🇪🇺', outer: SILVER, inner: GOLD, innerR: 0.7, thick: 0.15, size: 0.92, ttext: 'cruz',
-    heads(c, i) { H.text(c, '1', 205, 250, 210, i); H.text(c, 'EURO', 300, 330, 44, i); c.strokeStyle = i; c.lineWidth = 5; for (let k = 0; k < 6; k++) { c.beginPath(); c.moveTo(60, 120 + k * 45); c.lineTo(140, 120 + k * 45); c.stroke(); } H.dots(c, 220, 12, dk(SILVER, 0.55), 8); },
-    tails(c, i) { H.dots(c, 215, 12, i, 9); H.crown(c, 256, 240, 130, i); H.text(c, '2002', 256, 350, 30, i); } },
-  { id: 'gbp1', name: '1 pound', country: 'Reino Unido', flag: '🇬🇧', outer: GOLD, inner: SILVER, innerR: 0.66, thick: 0.17, size: 0.9, sides: 12, ttext: 'cruz',
-    heads(c, i) { H.profile(c, 250, 250, 300, i); H.arcText(c, 'ELIZABETH II · D · G · REG · F · D', 205, Math.PI * 1.05, Math.PI * 1.95, 22, dk(GOLD, 0.55)); H.text(c, '2017', 256, 425, 26, dk(GOLD, 0.55)); },
-    tails(c, i) { H.crown(c, 256, 175, 120, i); H.flower(c, 256, 290, 55, i); H.text(c, 'ONE POUND', 256, 400, 32, dk(GOLD, 0.55)); } },
-  { id: 'mx10', name: '10 pesos', country: 'México', flag: '🇲🇽', outer: GOLD, inner: SILVER, innerR: 0.66, thick: 0.17, size: 0.98, ttext: 'cruz',
-    heads(c, i) { H.eagle(c, 256, 250, 170, i); H.arcText(c, 'ESTADOS UNIDOS MEXICANOS', 205, Math.PI * 1.08, Math.PI * 1.92, 24, dk(GOLD, 0.55)); },
-    tails(c, i) { H.sun(c, 256, 245, 150, i, 20); c.beginPath(); c.arc(256, 245, 60, 0, Math.PI * 2); c.fillStyle = SILVER; c.fill(); H.text(c, '$10', 256, 245, 44, i); H.text(c, 'DIEZ PESOS', 256, 415, 26, dk(GOLD, 0.55)); } },
-  { id: 'ar1', name: '1 peso', country: 'Argentina', flag: '🇦🇷', outer: SILVER, inner: GOLD, innerR: 0.66, thick: 0.16, size: 0.9, ttext: 'cruz',
-    heads(c, i) { H.sun(c, 256, 250, 140, i, 16); H.arcText(c, 'REPUBLICA ARGENTINA', 205, Math.PI * 1.1, Math.PI * 1.9, 26, dk(SILVER, 0.5)); H.arcText(c, 'EN UNION Y LIBERTAD', 210, Math.PI * 0.15, Math.PI * 0.85, 22, dk(SILVER, 0.5)); },
-    tails(c, i) { H.text(c, '1', 256, 230, 190, i); H.text(c, 'PESO', 256, 340, 46, i); H.text(c, '1995', 256, 415, 26, dk(SILVER, 0.5)); } },
-  { id: 'jp100', name: '100 yen', country: 'Japón', flag: '🇯🇵', outer: SILVER, inner: null, thick: 0.13, size: 0.88, ttext: 'cruz',
-    heads(c, i) { H.flower(c, 180, 200, 60, i); H.flower(c, 330, 200, 60, i); H.flower(c, 256, 320, 60, i); H.text(c, '日本国', 256, 90, 40, i, 700, 'sans-serif'); H.text(c, '百円', 256, 430, 40, i, 700, 'sans-serif'); },
-    tails(c, i) { H.text(c, '100', 256, 245, 170, i, 800, '"Helvetica Neue", Arial, sans-serif'); H.text(c, '平成 30 年', 256, 400, 34, i, 700, 'sans-serif'); } },
-  { id: 'br1', name: '1 real', country: 'Brasil', flag: '🇧🇷', outer: SILVER, inner: GOLD, innerR: 0.64, thick: 0.16, size: 0.92, ttext: 'cruz',
-    heads(c, i) { H.profile(c, 262, 250, 280, i); H.arcText(c, 'BRASIL', 200, Math.PI * 1.32, Math.PI * 1.68, 40, dk(SILVER, 0.5)); H.dots(c, 220, 20, dk(SILVER, 0.5), 4); },
-    tails(c, i) { H.text(c, '1', 256, 235, 200, i); H.text(c, 'REAL', 256, 345, 46, i); H.text(c, '2019', 256, 415, 26, dk(SILVER, 0.5)); } },
-  { id: 'pe1', name: '1 sol', country: 'Perú', flag: '🇵🇪', outer: SILVER, inner: null, thick: 0.15, size: 0.9, ttext: 'cruz',
-    heads(c, i) { H.shield(c, 256, 245, 190, dk(SILVER, 0.85), i); H.star(c, 256, 215, 40, i); H.arcText(c, 'BANCO CENTRAL DE RESERVA DEL PERU', 210, Math.PI * 1.05, Math.PI * 1.95, 20, i); },
-    tails(c, i) { H.text(c, 'S/1', 256, 240, 150, i); H.text(c, 'UN SOL', 256, 345, 40, i); H.laurel(c, 256, 256, 205, i, 1); H.laurel(c, 256, 256, 205, i, -1); } },
-  { id: 'co500', name: '500 pesos', country: 'Colombia', flag: '🇨🇴', outer: GOLD, inner: SILVER, innerR: 0.66, thick: 0.16, size: 0.92, ttext: 'cruz',
-    heads(c, i) { c.fillStyle = i; c.beginPath(); c.arc(256, 260, 95, 0, Math.PI * 2); c.fill(); c.fillStyle = SILVER; c.beginPath(); c.arc(256, 260, 70, 0, Math.PI * 2); c.fill(); c.fillStyle = i; c.beginPath(); c.arc(256, 260, 40, 0, Math.PI * 2); c.fill(); H.arcText(c, 'REPUBLICA DE COLOMBIA', 205, Math.PI * 1.1, Math.PI * 1.9, 26, dk(GOLD, 0.55)); },
-    tails(c, i) { H.text(c, '500', 256, 235, 150, i, 800, '"Helvetica Neue", Arial, sans-serif'); H.text(c, 'PESOS', 256, 335, 40, i); H.text(c, '2016', 256, 415, 26, dk(GOLD, 0.55)); } },
+  { id: 'cl500', name: '500 pesos', country: 'Chile', flag: '🇨🇱', outer: GOLD, inner: SILVER, innerR: 0.7, thick: 0.17, size: 1.0, ttext: 'sello', reeded: false,
+    heads(c) { H.bust(c, CX + 8, CX + 30, 210, 'cardinal'); H.arcText(c, 'REPUBLICA DE CHILE', RR * 0.83, Math.PI * 1.12, Math.PI * 1.88, 40); H.arcTextBottom(c, 'CARDENAL RAUL SILVA HENRIQUEZ', RR * 0.83, Math.PI * 0.12, Math.PI * 0.88, 24); },
+    tails(c) { H.chileShield(c, CX, CX - 95, 105); H.text(c, '500', CX, CX + 55, 120, 800, SANS); H.text(c, 'PESOS', CX, CX + 130, 38, 700, SANS); H.text(c, '2024', CX, CX + 185, 26, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
+  { id: 'cl100', name: '100 pesos', country: 'Chile', flag: '🇨🇱', outer: SILVER, inner: GOLD, innerR: 0.7, thick: 0.17, size: 0.95, ttext: 'sello', reeded: false,
+    heads(c) { H.bust(c, CX + 8, CX + 30, 210, 'mapuche'); H.arcText(c, 'REPUBLICA DE CHILE', RR * 0.83, Math.PI * 1.12, Math.PI * 1.88, 40); H.arcTextBottom(c, 'PUEBLOS ORIGINARIOS', RR * 0.83, Math.PI * 0.16, Math.PI * 0.84, 26); },
+    tails(c) { H.chileShield(c, CX, CX - 95, 105); H.text(c, '100', CX, CX + 55, 120, 800, SANS); H.text(c, 'PESOS', CX, CX + 130, 38, 700, SANS); H.text(c, '2023', CX, CX + 185, 26, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
+  { id: 'cl10', name: '10 pesos', country: 'Chile', flag: '🇨🇱', outer: GOLD, inner: null, thick: 0.14, size: 0.82, ttext: 'sello', reeded: true,
+    heads(c) { H.bust(c, CX + 8, CX + 30, 215, 'ohiggins'); H.arcText(c, 'REPUBLICA DE CHILE', RR * 0.83, Math.PI * 1.12, Math.PI * 1.88, 40); H.arcTextBottom(c, 'LIBERTADOR B. O\'HIGGINS', RR * 0.83, Math.PI * 0.14, Math.PI * 0.86, 26); },
+    tails(c) { H.text(c, '10', CX, CX - 30, 200, 800, SANS); H.text(c, 'PESOS', CX, CX + 95, 44, 700, SANS); H.star(c, CX, CX - 190, 26); H.text(c, '2022', CX, CX + 175, 28, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
+  { id: 'usq', name: 'Quarter dollar', country: 'Estados Unidos', flag: '🇺🇸', outer: NICKEL, inner: null, thick: 0.14, size: 0.95, ttext: 'cruz', reeded: true,
+    heads(c) { H.bust(c, CX + 10, CX + 40, 215, 'liberty'); H.arcText(c, 'LIBERTY', RR * 0.83, Math.PI * 1.3, Math.PI * 1.7, 46); H.text(c, 'IN GOD', CX - 170, CX - 40, 22, 700, SANS); H.text(c, 'WE TRUST', CX - 170, CX - 14, 22, 700, SANS); H.arcTextBottom(c, '1998', RR * 0.83, Math.PI * 0.4, Math.PI * 0.6, 34); },
+    tails(c) { H.eagle(c, CX, CX - 10, 190); H.arcText(c, 'UNITED STATES OF AMERICA', RR * 0.84, Math.PI * 1.1, Math.PI * 1.9, 30); H.arcTextBottom(c, 'QUARTER DOLLAR', RR * 0.84, Math.PI * 0.22, Math.PI * 0.78, 32); H.text(c, 'E PLURIBUS UNUM', CX, CX - 150, 16, 700, SANS); } },
+  { id: 'eur1', name: '1 euro', country: 'Unión Europea', flag: '🇪🇺', outer: NICKEL, inner: GOLD, innerR: 0.7, thick: 0.15, size: 0.92, ttext: 'cruz', reeded: false,
+    heads(c) { H.europe(c, CX + 60, CX + 10, 150); H.text(c, '1', CX - 150, CX - 20, 200, 800, SANS); H.text(c, 'EURO', CX - 120, CX + 110, 40, 700, SANS); for (let i = 0; i < 6; i++) { c.fillRect(CX - 250, CX - 60 + i * 26, 70, 5); } for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; H.star(c, CX + Math.cos(a) * RR * 0.86, CX + Math.sin(a) * RR * 0.86, 14); } },
+    tails(c) { for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; H.star(c, CX + Math.cos(a) * RR * 0.86, CX + Math.sin(a) * RR * 0.86, 15); } H.bust(c, CX + 8, CX + 40, 200, 'queen'); H.text(c, '2002', CX - 160, CX + 130, 30, 700, SANS); } },
+  { id: 'gbp1', name: '1 pound', country: 'Reino Unido', flag: '🇬🇧', outer: GOLD, inner: NICKEL, innerR: 0.66, thick: 0.17, size: 0.9, sides: 12, ttext: 'cruz', reeded: false,
+    heads(c) { H.bust(c, CX + 8, CX + 40, 200, 'queen'); H.arcText(c, 'ELIZABETH II · D · G · REG · F · D · 2017', RR * 0.84, Math.PI * 1.02, Math.PI * 1.98, 26); },
+    tails(c) { H.rose(c, CX - 60, CX - 40, 60); H.leaf(c, CX + 20, CX - 90, 90, 22, 0.5); H.leaf(c, CX + 20, CX - 90, 90, 22, 1.2); H.sakura(c, CX + 70, CX + 60, 60); H.leaf(c, CX - 90, CX + 60, 80, 26, 2.2); H.arcTextBottom(c, 'ONE POUND', RR * 0.84, Math.PI * 0.25, Math.PI * 0.75, 38); } },
+  { id: 'mx10', name: '10 pesos', country: 'México', flag: '🇲🇽', outer: GOLD, inner: NICKEL, innerR: 0.66, thick: 0.17, size: 0.98, ttext: 'cruz', reeded: false,
+    heads(c) { H.cactusEagle(c, CX, CX - 10, 150); H.arcText(c, 'ESTADOS UNIDOS MEXICANOS', RR * 0.84, Math.PI * 1.06, Math.PI * 1.94, 30); H.wreath(c, CX, CX + 10, RR * 0.6, 1, 7); H.wreath(c, CX, CX + 10, RR * 0.6, -1, 7); },
+    tails(c) { for (let i = 0; i < 20; i++) { c.save(); c.translate(CX, CX - 10); c.rotate(i * Math.PI / 10); c.beginPath(); c.moveTo(150, -14); c.lineTo(205, 0); c.lineTo(150, 14); c.closePath(); c.fill(); c.restore(); } c.beginPath(); c.arc(CX, CX - 10, 150, 0, Math.PI * 2); c.arc(CX, CX - 10, 120, 0, Math.PI * 2, true); c.fill(); c.beginPath(); c.arc(CX, CX - 10, 95, 0, Math.PI * 2); c.arc(CX, CX - 10, 75, 0, Math.PI * 2, true); c.fill(); H.text(c, '$10', CX, CX - 10, 60, 800, SANS); H.text(c, 'DIEZ PESOS', CX, CX + 200, 28, 700, SANS); } },
+  { id: 'ar1', name: '1 peso', country: 'Argentina', flag: '🇦🇷', outer: NICKEL, inner: GOLD, innerR: 0.66, thick: 0.16, size: 0.9, ttext: 'cruz', reeded: false,
+    heads(c) { H.sunFace(c, CX, CX, 150, 32); H.arcText(c, 'REPUBLICA ARGENTINA', RR * 0.84, Math.PI * 1.1, Math.PI * 1.9, 32); H.arcTextBottom(c, 'EN UNION Y LIBERTAD', RR * 0.84, Math.PI * 0.14, Math.PI * 0.86, 28); },
+    tails(c) { H.text(c, '1', CX, CX - 30, 230, 800, SANS); H.text(c, 'PESO', CX, CX + 110, 52, 700, SANS); H.text(c, '1995', CX, CX + 185, 28, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
+  { id: 'jp100', name: '100 yen', country: 'Japón', flag: '🇯🇵', outer: NICKEL, inner: null, thick: 0.13, size: 0.88, ttext: 'cruz', reeded: true,
+    heads(c) { H.sakura(c, CX - 90, CX - 40, 70); H.sakura(c, CX + 90, CX - 40, 70); H.sakura(c, CX, CX + 70, 70); H.leaf(c, CX - 40, CX + 10, 60, 14, 2.6); H.leaf(c, CX + 40, CX + 10, 60, 14, 0.5); H.text(c, '日本国', CX, CX - 190, 50, 700, 'sans-serif'); H.text(c, '百円', CX, CX + 195, 50, 700, 'sans-serif'); },
+    tails(c) { H.text(c, '100', CX, CX - 20, 210, 800, SANS); H.text(c, '平成 30 年', CX, CX + 130, 44, 700, 'sans-serif'); c.beginPath(); c.arc(CX, CX, RR * 0.9, 0, Math.PI * 2); c.arc(CX, CX, RR * 0.86, 0, Math.PI * 2, true); c.fill(); } },
+  { id: 'br1', name: '1 real', country: 'Brasil', flag: '🇧🇷', outer: NICKEL, inner: GOLD, innerR: 0.64, thick: 0.16, size: 0.92, ttext: 'cruz', reeded: false,
+    heads(c) { H.bust(c, CX + 8, CX + 40, 200, 'liberty'); H.arcText(c, 'BRASIL', RR * 0.84, Math.PI * 1.3, Math.PI * 1.7, 52); for (let i = 0; i < 24; i++) { const a = i * Math.PI / 12; H.star(c, CX + Math.cos(a) * RR * 0.88, CX + Math.sin(a) * RR * 0.88, 7); } },
+    tails(c) { H.text(c, '1', CX - 40, CX - 20, 240, 800, SANS); H.text(c, 'REAL', CX + 60, CX + 120, 52, 700, SANS); c.lineWidth = 6; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(CX + 60, CX - 200 + i * 30); c.lineTo(CX + 200, CX - 200 + i * 30); c.stroke(); } H.text(c, '2019', CX - 150, CX + 150, 28, 700, SANS); } },
+  { id: 'pe1', name: '1 sol', country: 'Perú', flag: '🇵🇪', outer: NICKEL, inner: null, thick: 0.15, size: 0.9, ttext: 'cruz', reeded: true,
+    heads(c) { c.beginPath(); c.moveTo(CX - 90, CX - 110); c.lineTo(CX + 90, CX - 110); c.lineTo(CX + 90, CX + 20); c.quadraticCurveTo(CX + 90, CX + 90, CX, CX + 120); c.quadraticCurveTo(CX - 90, CX + 90, CX - 90, CX + 20); c.closePath(); c.fill(); c.save(); c.globalCompositeOperation = 'destination-out'; H.vicuna(c, CX - 45, CX - 60, 55); H.tree(c, CX + 45, CX - 70, 55); H.cornucopia(c, CX, CX + 55, 60); c.restore(); H.wreath(c, CX, CX + 10, RR * 0.7, 1, 8); H.wreath(c, CX, CX + 10, RR * 0.7, -1, 8); H.arcText(c, 'BANCO CENTRAL DE RESERVA DEL PERU', RR * 0.86, Math.PI * 1.04, Math.PI * 1.96, 24); },
+    tails(c) { H.text(c, 'S/', CX - 100, CX - 10, 90, 700, SANS); H.text(c, '1', CX + 50, CX - 20, 230, 800, SANS); H.text(c, 'UN SOL', CX, CX + 130, 46, 700, SANS); H.text(c, '2021', CX, CX + 190, 26, 700, SANS); H.wreath(c, CX, CX, RR * 0.84, 1, 9); H.wreath(c, CX, CX, RR * 0.84, -1, 9); } },
+  { id: 'co500', name: '500 pesos', country: 'Colombia', flag: '🇨🇴', outer: GOLD, inner: NICKEL, innerR: 0.66, thick: 0.16, size: 0.92, ttext: 'cruz', reeded: false,
+    heads(c) { H.frog(c, CX, CX + 10, 130); H.arcText(c, 'REPUBLICA DE COLOMBIA', RR * 0.84, Math.PI * 1.08, Math.PI * 1.92, 30); H.arcTextBottom(c, 'RANA DE CRISTAL', RR * 0.84, Math.PI * 0.2, Math.PI * 0.8, 24); },
+    tails(c) { H.text(c, '500', CX, CX - 20, 190, 800, SANS); H.text(c, 'PESOS', CX, CX + 110, 46, 700, SANS); H.text(c, '2016', CX, CX + 180, 28, 700, SANS); c.beginPath(); c.arc(CX, CX, RR * 0.9, 0, Math.PI * 2); c.arc(CX, CX, RR * 0.87, 0, Math.PI * 2, true); c.fill(); } },
 ];
 const coinTex = {};
 function buildTex(coin) {
   if (coinTex[coin.id]) return coinTex[coin.id];
   const mk = side => {
     const cv = document.createElement('canvas'); cv.width = TEX; cv.height = TEX; const c = cv.getContext('2d');
-    c.beginPath(); c.arc(256, 256, 252, 0, Math.PI * 2); c.clip();
-    // base metal with soft radial sheen
-    const base = coin.outer, g = c.createRadialGradient(200, 180, 20, 256, 256, 300);
-    g.addColorStop(0, dk(base, 1.12)); g.addColorStop(0.6, base); g.addColorStop(1, dk(base, 0.8)); c.fillStyle = g; c.fillRect(0, 0, TEX, TEX);
-    // raised rim
-    H.ring(c, 232, 252, dk(base, 0.78)); H.ring(c, 226, 234, dk(base, 1.15));
-    let ink = dk(base, 0.5);
+    c.beginPath(); c.arc(CX, CX, RR, 0, Math.PI * 2); c.clip();
+    const metal = (col, r, brushed) => {
+      const g = c.createRadialGradient(CX - r * 0.35, CX - r * 0.4, r * 0.05, CX, CX, r * 1.05);
+      g.addColorStop(0, dk(col, 1.18)); g.addColorStop(0.45, col); g.addColorStop(0.8, dk(col, 0.9)); g.addColorStop(1, dk(col, 0.72));
+      c.beginPath(); c.arc(CX, CX, r, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+      if (brushed) { c.save(); c.beginPath(); c.arc(CX, CX, r, 0, Math.PI * 2); c.clip(); c.globalAlpha = 0.08; for (let k = 0; k < 90; k++) { c.beginPath(); c.arc(CX, CX, r * (k / 90), 0, Math.PI * 2); c.strokeStyle = k & 1 ? '#fff' : '#000'; c.lineWidth = 1; c.stroke(); } c.restore(); }
+    };
+    metal(coin.outer, RR, true);
+    // raised rim + beading
+    c.fillStyle = dk(coin.outer, 0.72); c.beginPath(); c.arc(CX, CX, RR, 0, Math.PI * 2); c.arc(CX, CX, RR - 12, 0, Math.PI * 2, true); c.fill();
+    c.fillStyle = dk(coin.outer, 1.22); c.beginPath(); c.arc(CX, CX, RR - 12, 0, Math.PI * 2); c.arc(CX, CX, RR - 18, 0, Math.PI * 2, true); c.fill();
     if (coin.inner) {
-      const r = 236 * coin.innerR, g2 = c.createRadialGradient(220, 220, 10, 256, 256, r);
-      g2.addColorStop(0, dk(coin.inner, 1.1)); g2.addColorStop(1, dk(coin.inner, 0.82));
-      c.beginPath(); c.arc(256, 256, r, 0, Math.PI * 2); c.fillStyle = g2; c.fill();
-      H.ring(c, r - 3, r + 2, dk(base, 0.7)); ink = dk(coin.inner, 0.45);
+      const r = RR * coin.innerR; metal(coin.inner, r, true);
+      c.fillStyle = dk(coin.outer, 0.62); c.beginPath(); c.arc(CX, CX, r + 3, 0, Math.PI * 2); c.arc(CX, CX, r - 1, 0, Math.PI * 2, true); c.fill();
+    } else { c.fillStyle = dk(coin.outer, 0.8); H.bead(c, RR - 26, 110, 2.6); }
+    // design drawn on a mask, then composited as embossed relief
+    const mask = document.createElement('canvas'); mask.width = TEX; mask.height = TEX; const m = mask.getContext('2d');
+    m.fillStyle = '#000'; m.strokeStyle = '#000'; coin[side](m);
+    const relief = (dx, dy, color, alpha) => { c.save(); c.globalAlpha = alpha; c.globalCompositeOperation = 'source-over'; const t = document.createElement('canvas'); t.width = TEX; t.height = TEX; const tc = t.getContext('2d'); tc.drawImage(mask, dx, dy); tc.globalCompositeOperation = 'source-in'; tc.fillStyle = color; tc.fillRect(0, 0, TEX, TEX); c.drawImage(t, 0, 0); c.restore(); };
+    relief(3.5, 4, '#000', 0.55); relief(-2, -2.5, '#fff', 0.6);
+    // raised surface tone: same metal, a touch lighter, with a directional sheen
+    const top = document.createElement('canvas'); top.width = TEX; top.height = TEX; const tc = top.getContext('2d');
+    const base = coin.inner && side ? coin.inner : coin.outer;
+    const sg = tc.createLinearGradient(0, 0, TEX, TEX); sg.addColorStop(0, dk(coin.inner || coin.outer, 1.35)); sg.addColorStop(0.5, dk(coin.inner || coin.outer, 1.12)); sg.addColorStop(1, dk(coin.inner || coin.outer, 0.8));
+    tc.fillStyle = sg; tc.fillRect(0, 0, TEX, TEX);
+    if (coin.inner) { // outer-ring lettering keeps the ring's metal
+      const r = RR * coin.innerR; const og = tc.createLinearGradient(0, 0, TEX, TEX); og.addColorStop(0, dk(coin.outer, 1.35)); og.addColorStop(1, dk(coin.outer, 0.8)); tc.fillStyle = og; tc.beginPath(); tc.arc(CX, CX, RR, 0, Math.PI * 2); tc.arc(CX, CX, r, 0, Math.PI * 2, true); tc.fill();
     }
-    c.save(); c.shadowColor = 'rgba(0,0,0,0.35)'; c.shadowBlur = 2; c.shadowOffsetX = 1; c.shadowOffsetY = 1.5;
-    coin[side](c, ink); c.restore();
-    // relief highlight (light from top-left)
-    c.save(); c.globalCompositeOperation = 'source-atop'; const hl = c.createLinearGradient(0, 0, TEX, TEX); hl.addColorStop(0, 'rgba(255,255,255,0.16)'); hl.addColorStop(0.5, 'rgba(255,255,255,0)'); hl.addColorStop(1, 'rgba(0,0,0,0.14)'); c.fillStyle = hl; c.fillRect(0, 0, TEX, TEX); c.restore();
+    tc.globalCompositeOperation = 'destination-in'; tc.drawImage(mask, 0, 0);
+    c.drawImage(top, 0, 0);
+    // global specular sweep
+    c.save(); const hl = c.createLinearGradient(0, 0, TEX, TEX); hl.addColorStop(0, 'rgba(255,255,255,0.22)'); hl.addColorStop(0.42, 'rgba(255,255,255,0)'); hl.addColorStop(0.6, 'rgba(0,0,0,0)'); hl.addColorStop(1, 'rgba(0,0,0,0.2)'); c.fillStyle = hl; c.fillRect(0, 0, TEX, TEX); c.restore();
     return cv;
   };
   coinTex[coin.id] = { heads: mk('heads'), tails: mk('tails') }; return coinTex[coin.id];
@@ -166,7 +253,7 @@ const TABLES = {
   marmol: { c: '#e8e4dc', e: '#a9a39a', rim: '#3a3a40', rim2: '#1b1b1f', name: 'Mármol' },
   pizarra: { c: '#4a505a', e: '#22262d', rim: '#1a1c20', rim2: '#0e0f11', name: 'Pizarra' },
 };
-const DEFAULT_CFG = { sound: true, shake: false, haptic: true, table: 'verde', power: 1, theme: null, coin: 'cl500', n: 1, tailsName: 'sello', eco: false };
+const DEFAULT_CFG = { sound: true, shake: false, haptic: true, table: 'verde', power: 1, theme: null, coin: 'cl500', n: 1, tailsName: 'sello', eco: false, view: 'persp' };
 let cfg = Object.assign({}, DEFAULT_CFG);
 const LS = {
   get(k, d) { try { const v = localStorage.getItem('moneda_' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
@@ -203,10 +290,11 @@ function haptic(ms) { if (cfg.haptic && navigator.vibrate) { try { navigator.vib
 
 /* ================= Camera ================= */
 const canvas = $('#table'), ctx = canvas.getContext('2d');
-let W = 0, H_ = 0, DPR = 1, cam = null, bounds = { x: 6, zMin: -6, zMax: 6 }, feltCache = null;
+let W = 0, H_ = 0, DPR = 1, cam = null, maxH = 12, bounds = { x: 6, zMin: -6, zMax: 6 }, feltCache = null;
 function makeCamera() {
-  const eye = [0, 15, 11], target = [0, 0.4, -0.2];
-  const fwd = V.norm(V.sub(target, eye)), right = V.norm(V.cross(fwd, [0, 1, 0])), up = V.cross(right, fwd);
+  const top = cfg.view === 'top';
+  const eye = top ? [0, 16.5, 0.6] : [0, 15, 11], target = top ? [0, 0, 0] : [0, 0.4, -0.2];
+  const fwd = V.norm(V.sub(target, eye)), right = V.norm(V.cross(fwd, top ? [0, 0, -1] : [0, 1, 0])), up = V.cross(right, fwd);
   const f = Math.min(H_ * 1.3, W * 1.9), cx = W / 2, cy = H_ / 2;
   return {
     eye, fwd, right, up, f, cx, cy,
@@ -221,7 +309,8 @@ function resize() {
   cam = makeCamera();
   const m = 1.3;
   const xTop = Math.abs(cam.unproject(W, 0, 1)[0]), xBot = Math.abs(cam.unproject(W, H_, 1)[0]);
-  bounds = { x: Math.min(xTop, xBot) - m, zMin: cam.unproject(W / 2, 0, 3)[2] + m, zMax: cam.unproject(W / 2, H_ - 70, 0.2)[2] - m };
+  bounds = { x: Math.min(xTop, xBot) - m, zMin: cam.unproject(W / 2, 0, cfg.view === 'top' ? 1 : 3)[2] + m, zMax: cam.unproject(W / 2, H_ - 70, 0.2)[2] - m };
+  maxH = cam.eye[1] - 3.5;
   feltCache = null; needsDraw = true;
 }
 new ResizeObserver(resize).observe(canvas);
@@ -257,6 +346,7 @@ function stepCoin(c) {
   if (c.settled || c.snap) return;
   c.vel[1] -= G * DT; c.vel = V.scale(c.vel, 0.999); c.ang = V.scale(c.ang, 0.996);
   c.pos = V.add(c.pos, V.scale(c.vel, DT));
+  if (c.pos[1] > maxH) { c.pos[1] = maxH; if (c.vel[1] > 0) c.vel[1] = 0; }
   const al = V.len(c.ang); if (al > 1e-6) c.q = Q.norm(Q.mul(Q.fromAxis(V.scale(c.ang, 1 / al), al * DT), c.q));
   updateWorld(c);
   let minY = Infinity;
@@ -362,7 +452,7 @@ function drawCoin(c) {
     const j = (i + 1) % NR;
     const mid = V.scale(V.add(top[i], top[j]), 0.5), rn = V.norm(V.sub(mid, V.add(c.pos, V.scale(n, V.dot(V.sub(mid, c.pos), n)))));
     if (V.dot(rn, V.sub(cam.eye, mid)) <= 0) continue;
-    const diff = Math.max(0, V.dot(rn, LIGHT)), shade = (0.45 + 0.55 * diff) * (i & 1 ? 0.93 : 1);
+    const diff = Math.max(0, V.dot(rn, LIGHT)), shade = (0.45 + 0.55 * diff) * (c.def.reeded === false ? 1 : (i & 1 ? 0.88 : 1.04));
     poly(ctx, [pt[i], pt[j], pb[j], pb[i]]); ctx.fillStyle = rgbStr(outer, shade); ctx.fill(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 0.8; ctx.stroke();
   }
   // visible face
@@ -431,7 +521,8 @@ function flip(dirHint) {
   coins.forEach((c, i) => {
     c.settled = false; c.snap = null; c.restN = 0; c.edgeN = 0; c.edgeT = 0; c.stuckN = 0; c.nudges = 0; c.tipDir = Math.random() < 0.5 ? 1 : -1; c.result = null; c.glow = 0;
     const p = cfg.power;
-    c.vel = [rnd(-1.5, 1.5) + (dirHint ? dirHint[0] * 4 : 0), rnd(12, 15) * p, rnd(-1.5, 1.5) + (dirHint ? dirHint[1] * 4 : 0)];
+    const vmax = Math.sqrt(2 * G * maxH);
+    c.vel = [rnd(-1.5, 1.5) + (dirHint ? dirHint[0] * 4 : 0), Math.min(vmax, rnd(21, 27) * p), rnd(-1.5, 1.5) + (dirHint ? dirHint[1] * 4 : 0)];
     const ax = V.norm([rnd(-1, 1), rnd(-0.15, 0.15), rnd(-1, 1)]);
     c.ang = V.scale(ax, rnd(22, 38) * p);
     c.pos[1] = Math.max(c.pos[1], c.R + 0.2);
@@ -560,6 +651,8 @@ function bind() {
   window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.key === 'Enter') && document.activeElement === document.body) { e.preventDefault(); flip(); } if (e.key === 'Escape') closeSheets(); });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!cfg.theme) applyTheme(); });
   if (cfg.shake && window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission !== 'function') window.addEventListener('devicemotion', onMotion);
+  $('#viewBtn').addEventListener('click', () => { cfg.view = cfg.view === 'top' ? 'persp' : 'top'; LS.set('cfg', cfg); resize(); coins.forEach(updateWorld); $('#viewBtn').textContent = cfg.view === 'top' ? '◎' : '⬒'; toast(cfg.view === 'top' ? 'Vista desde arriba' : 'Vista en perspectiva'); });
+  $('#viewBtn').textContent = cfg.view === 'top' ? '◎' : '⬒';
   const stage = $('.stage'), fsBtn = $('#fsBtn');
   if (!(stage.requestFullscreen || stage.webkitRequestFullscreen)) fsBtn.style.display = 'none';
   fsBtn.addEventListener('click', () => { if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage); });
@@ -567,5 +660,5 @@ function bind() {
 
 applyTheme(); bind(); renderCoins(); renderStats(); resize(); setupCoins(); requestAnimationFrame(loop);
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => { });
-window.MONEDA = { coins, flip, cfg, history, physicsStep, render, COINS, setupCoins, get cam() { return cam; } };
+window.MONEDA = { coins, flip, cfg, history, physicsStep, render, COINS, setupCoins, tex: buildTex, get cam() { return cam; } };
 })();
