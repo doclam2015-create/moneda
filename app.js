@@ -275,7 +275,7 @@ function audioInit() {
 }
 function ding(vol, freq, dur) {
   if (!actx || !cfg.sound) return;
-  if (actx.state === 'suspended') actx.resume();
+  if (actx.state !== 'running') { try { actx.resume(); } catch (e) { } }
   const t = actx.currentTime;
   const src = actx.createBufferSource(); src.buffer = noiseBuf;
   const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq * 1.6; bp.Q.value = 2;
@@ -287,6 +287,23 @@ function ding(vol, freq, dur) {
     o.connect(g2); g2.connect(actx.destination); o.start(t); o.stop(t + dur);
   });
 }
+
+/* iOS audio: keep the context alive across silent switch, backgrounding and interruptions */
+let silentEl = null;
+function ensureAudio() { // call from any user gesture
+  if (!cfg.sound) return;
+  audioInit();
+  if (!actx) return;
+  if (actx.state !== 'running') { try { actx.resume(); } catch (e) { } }
+  try { const s = actx.createBufferSource(); s.buffer = actx.createBuffer(1, 1, 22050); s.connect(actx.destination); s.start(0); } catch (e) { }
+  if (!silentEl) { // a looping silent <audio> switches iOS to the "playback" category so WebAudio ignores the mute switch
+    silentEl = document.createElement('audio'); silentEl.setAttribute('playsinline', ''); silentEl.loop = true; silentEl.volume = 0.01; silentEl.style.display = 'none'; document.body.appendChild(silentEl);
+    silentEl.src = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+    silentEl.play().catch(() => { silentEl = null; });
+  } else if (silentEl.paused) { silentEl.play().catch(() => { }); }
+}
+['touchend', 'mousedown', 'keydown'].forEach(ev => document.addEventListener(ev, ensureAudio, { passive: true, capture: true }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && actx && actx.state !== 'running') { try { actx.resume(); } catch (e) { } } });
 function haptic(ms) { if (cfg.haptic && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) { } } }
 
 /* ================= Camera ================= */
@@ -516,7 +533,7 @@ function setupCoins() {
 }
 function setStatus(t) { $('#status').textContent = t; }
 function flip(dirHint) {
-  audioInit(); if (actx && actx.state === 'suspended') actx.resume();
+  ensureAudio();
   if (rolling) return;
   if (!coins.length || coins[0].def.id !== cfg.coin || coins.length !== cfg.n) setupCoins();
   $('#result').classList.remove('show'); $('#flipBtn').classList.add('busy');
@@ -678,7 +695,7 @@ function bind() {
   $('#backdrop').addEventListener('click', closeSheets);
   $$('.sheet .close').forEach(b => b.addEventListener('click', closeSheets));
   $('#clearHist').addEventListener('click', () => { if (confirm('¿Borrar todo el historial?')) { history = []; LS.set('hist', history); renderHistory(); } });
-  $('#optSound').addEventListener('click', () => { cfg.sound = !cfg.sound; renderSettings(); LS.set('cfg', cfg); if (cfg.sound) { audioInit(); ding(0.2, 2200, 0.4); } });
+  $('#optSound').addEventListener('click', () => { cfg.sound = !cfg.sound; renderSettings(); LS.set('cfg', cfg); if (cfg.sound) { ensureAudio(); ding(0.2, 2200, 0.4); } });
   $('#optHaptic').addEventListener('click', () => { cfg.haptic = !cfg.haptic; renderSettings(); LS.set('cfg', cfg); });
   $('#optEco').addEventListener('click', () => { cfg.eco = !cfg.eco; renderSettings(); LS.set('cfg', cfg); });
   $('#optShake').addEventListener('click', () => { cfg.shake = !cfg.shake; renderSettings(); LS.set('cfg', cfg); if (cfg.shake) enableShake(); });
